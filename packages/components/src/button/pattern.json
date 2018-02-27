@@ -2,12 +2,6 @@
   "name": "button",
   "displayName": "Button",
   "version": "1.0.0",
-  "patterns": {
-    "../fonts": "fonts",
-    "../icon": "icon",
-    "../link": "link"
-  },
-  "demoPatterns": {
-    "../demo-themer": "demo-themer"
-  }
+  "flag": "stable",
+  "tags": ["atom"]
 }

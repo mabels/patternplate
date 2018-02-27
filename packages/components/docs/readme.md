@@ -1,3 +1,8 @@
+---
+options:
+  order: 0
+---
+
 # Documentation
 
 ## Pattern Development

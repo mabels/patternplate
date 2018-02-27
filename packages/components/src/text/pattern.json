@@ -2,10 +2,5 @@
   "name": "text",
   "displayName": "Text",
   "version": "1.0.0",
-  "patterns": {
-    "../fonts": "fonts"
-  },
-  "demoPatterns": {
-    "../demo-themer": "demo-themer"
-  }
+  "flag": "stable"
 }

@@ -1,1 +1,1 @@
-export {VirtualList} from "./components/virtual-list";
+module.exports = require("./lib");

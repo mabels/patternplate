@@ -44,7 +44,7 @@ async function renderPage(uri, { config, schema }) {
     link: head.link,
     meta: head.meta,
     title: head.title,
-    scripts: [`${base}/static/vendors.js`, `${base}/static/client.js`]
+    scripts: [`${base}/static/client.js`]
   });
 }
 

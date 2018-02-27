@@ -1,4 +1,3 @@
-// const AggregateError = require("aggregate-error");
 const path = require("path");
 const loadConfig = require("@patternplate/load-config");
 const loadMeta = require("@patternplate/load-meta");
@@ -10,28 +9,28 @@ const micromatch = require("micromatch");
 const WebSocket = require("ws");
 const debug = require("util").debuglog("PATTERNPLATE");
 const Observable = require("zen-observable");
+const {es6app, Es6ischVfs} = require("es6isch");
 
-const createCompiler = require("./compiler");
 const demo = require("./demo");
-const pack = require("./pack");
 const main = require("./main");
 
 module.exports = api;
 
 async function api({ server, cwd }) {
-  const clientQueue = await createCompiler({ cwd, target: "web" });
-  const serverQueue = await createCompiler({ cwd, target: "node" });
-
   const watcher = await createWatcher({cwd});
 
   const mw = express()
     .get("/", await main({ cwd }))
-    .get("/demo/*/index.html", await demo({ cwd, queue: serverQueue }))
-    .use(await pack({ compiler: clientQueue.compiler }));
+    .get("/demo/*/index.html", await demo({ cwd }))
+    .use("/modules", es6app(Es6ischVfs.from({
+      rootAbsBase: cwd,
+      es6ischBase: '/'
+    })));
 
   mw.subscribe = () => {
-    debug("subscribing to webpack and fs events");
+    debug("subscribing to fs events");
     const wss = new WebSocket.Server({server});
+    const send = getSender(wss);
 
     // Prevent client errors (frequently caused by Chrome disconnecting on reload)
     // from bubbling up and killing the server, ref: https://github.com/websockets/ws/issues/1256
@@ -44,16 +43,7 @@ async function api({ server, cwd }) {
       });
     });
 
-    const send = getSender(wss);
-    clientQueue.subscribe();
-    serverQueue.subscribe(queue => {
-      const [message] = queue;
-      send(message);
-    });
-
-    watcher.subscribe(message => {
-      send(message);
-    });
+    watcher.subscribe(message => send(message));
   };
 
   return mw;
@@ -86,7 +76,6 @@ async function createWatcher(options) {
     ignoreInitial: true
   });
 
-  debug("subscribing to meta data and documentation changes");
   watcher.on('all', (e, p) => {
     const rel = path.relative(cwd, p);
 
@@ -115,4 +104,3 @@ function getSender(wss) {
     })
   }
 }
-

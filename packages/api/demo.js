@@ -1,15 +1,13 @@
-const path = require("path");
 const loadConfig = require("@patternplate/load-config");
 const loadMeta = require("@patternplate/load-meta");
 const AggregateError = require("aggregate-error");
-const fromString = require("require-from-string");
-const sander = require("@marionebl/sander");
 const unindent = require("unindent");
+const upperFirst = require("lodash.upperfirst");
+const camelCase = require("lodash.camelcase");
+
+const pascalCase = (...args) => upperFirst(camelCase(...args));
 
 module.exports = demo;
-
-const BUNDLE_PATH = "/patternplate.node.components.js";
-const RENDER_PATH = "/patternplate.node.render.js";
 
 async function demo(options) {
   return async function demoRoute(req, res) {
@@ -25,21 +23,17 @@ async function demo(options) {
         entry
       });
 
-      const found = patterns.find(pattern => pattern.id === id);
+      const pattern = patterns.find(pattern => pattern.id === id);
 
-      if (!found) {
+      if (!pattern) {
         return res.sendStatus(404);
       }
 
-      const {fs} = await wait(options.queue);
-
-      const getModule = fromFs(fs);
-      const render = getModule(RENDER_PATH);
-      const bundle = getModule(BUNDLE_PATH);
-      const component = getComponent(bundle, found);
-      const content = render(component);
-
-      res.send(html(content, found));
+      res.send(html({
+        pattern,
+        config,
+        content: {}
+      }));
     } catch (err) {
       const error = Array.isArray(err) ? new AggregateError(err) : err;
       console.error(error);
@@ -48,50 +42,9 @@ async function demo(options) {
   };
 }
 
-function wait(observable) {
-  return new Promise((resolve, reject) => {
-    const [message = {}] = observable.queue;
-    switch (message.type) {
-      case 'done':
-        return resolve(message.payload);
-      case 'error':
-        return reject(message.payload);
-    }
-
-    observable.subscribe(
-      queue => {
-        const [message] = queue;
-        switch (message.type) {
-          case 'done':
-            return resolve(message.payload);
-          case 'error':
-            return reject(message.payload);
-        }
-      },
-      reject
-    )
-  });
-}
-
-function getComponent(components, data) {
-  const top = components[data.artifact];
-
-  if (top[data.source]) {
-    return top[data.source];
-  }
-
-  return top;
-}
-
-function fromFs(fs) {
-  return filename => {
-    const componentBundleSource = String(fs.readFileSync(filename));
-    return fromString(componentBundleSource, filename);
-  };
-}
-
-function html(content, payload) {
-  const data = encodeURIComponent(JSON.stringify(payload));
+function html({content, config, pattern}) {
+  const data = encodeURIComponent(JSON.stringify(pattern));
+  const LocalName = pascalCase(pattern.manifest.name);
 
   return unindent(`
     <!doctype html>
@@ -103,17 +56,37 @@ function html(content, payload) {
         ${content.css || ""}
       </head>
       <body>
-        <textarea style="display: none;" data-patternplate-vault="data-patternplate-vault">${data}</textarea>
+        <textarea style="display: none;" data-patternplate-vault="data-pattedrnplate-vault">${data}</textarea>
         <!-- content.before -->
         ${content.before || ""}
         <!-- content.html -->
         <div data-patternplate-mount="data-patternplate-mount">${content.html || ""}</div>
         <!-- content.after -->
         ${content.after || ""}
-        <script src="/api/patternplate.web.vendors.js"></script>
-        <script src="/api/patternplate.web.components.js"></script>
-        <script src="/api/patternplate.web.mount.js"></script>
-        <script src="/api/patternplate.web.demo.js"></script>
+        <script type="module">
+          import mount from "/api/modules/node_modules/${config.mount}.js";
+          import ${LocalName} from "/api/modules/${pattern.artifact}";
+
+          const element = document.querySelector('[data-patternplate-mount]');
+          const data = getData();
+          mount(component, element);
+
+          function getData() {
+            var vault = document.querySelector('[data-patternplate-vault]');
+            if (!vault) {
+              return {};
+            }
+            var encodedJson = vault.textContent;
+            if (!encodedJson) {
+              return {};
+            }
+            var json = decodeURIComponent(encodedJson);
+            if (!json) {
+              return {};
+            }
+            return JSON.parse(json);
+          }
+        </script>
       </body>
     </html>
   `);

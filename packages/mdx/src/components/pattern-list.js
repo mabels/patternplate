@@ -1,9 +1,9 @@
 import React from "react";
 
-export function VirtualList(props) {
+export function PatternList() {
   return (
     <div>
-      VirtualList
+      PatternList
     </div>
   );
 }
