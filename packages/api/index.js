@@ -9,7 +9,7 @@ const micromatch = require("micromatch");
 const WebSocket = require("ws");
 const debug = require("util").debuglog("PATTERNPLATE");
 const Observable = require("zen-observable");
-const {es6app, Es6ischVfs} = require("es6isch");
+const { app, Vfs } = require("es6isch");
 
 const demo = require("./demo");
 const main = require("./main");
@@ -22,9 +22,10 @@ async function api({ server, cwd }) {
   const mw = express()
     .get("/", await main({ cwd }))
     .get("/demo/*/index.html", await demo({ cwd }))
-    .use("/modules", es6app(Es6ischVfs.from({
+    .use("/modules", app(Vfs.from({
       rootAbsBase: cwd,
-      es6ischBase: '/'
+      es6ischBase: '/',
+      rootRelBase: '/api/modules'
     })));
 
   mw.subscribe = () => {
